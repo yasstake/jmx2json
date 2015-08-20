@@ -5,7 +5,7 @@ import unittest
 from jma.jmx import JMX
 import geojson;
 
-class MyTestCase(unittest.TestCase):
+class JMXTestCase(unittest.TestCase):
     def test_parse(self):
         jmx = JMX()
 
@@ -36,6 +36,10 @@ class MyTestCase(unittest.TestCase):
         polyline = jmx.polyline('+59.27+151.99/+59.24+151.79/+59.21+151.60/')
 
         self.assertEqual(polyline, [[151.99, 59.27], [151.79, 59.24], [151.6, 59.21]])
+
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
