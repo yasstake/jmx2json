@@ -9,7 +9,7 @@ from geojson import Polygon
 from geojson import Point
 from geojson import Feature
 from geojson import FeatureCollection
-
+import geojson
 
 
 class JMX:
@@ -45,7 +45,7 @@ class JMX:
         if (b != None):
             features = self.body(b)
 
-        return FeatureCollection(features)
+        return FeatureCollection(*features)
 
     def control(self, report):
         return
@@ -103,7 +103,7 @@ class JMX:
             return None
 
         if (first == last):
-            return Polygon(line)
+            return Polygon([line])
         else:
             return LineString(line)
 
@@ -118,7 +118,7 @@ class JMX:
             if (line != None):
                 lines.append(line)
 
-        return [lines]
+        return lines
 
     def coordinate_xy(self, coordinate_string):
         coordinate = self.re_number.findall(coordinate_string)
@@ -126,7 +126,7 @@ class JMX:
             return None
         [y, x] = coordinate
 
-        return [float(x), float(y)]
+        return (float(x), float(y))
 
     def getText(self, element):
         result = ''
@@ -147,7 +147,7 @@ class WeatherChart(JMX):
         center = cp.find(".//jmx_body:CenterPart", self.ns)
 
         coordinate_item = center.find(".//jmx_eb:Coordinate", self.ns)
-        [y, x] = self.coordinate_xy(coordinate_item.text);
+        [x, y] = self.coordinate_xy(coordinate_item.text);
 
         direction_item  = center.find(".//jmx_eb:Direction", self.ns)
         if(direction_item.text):
@@ -171,7 +171,7 @@ class WeatherChart(JMX):
         pressure = int(pressure_item.text);
         properties["Pressure"] = pressure
 
-        return Feature(geometry = Point([y, x], properties = properties))
+        return Feature(geometry = Point((x, y)), properties = properties)
 
 
     def isobar_part(self, ip, properties = {}):
@@ -181,33 +181,51 @@ class WeatherChart(JMX):
         pressure = pressure_item.text
         properties["PresssureLevel"] = pressure
 
-        line_item = part.find("jmx_eb:Line", self.ns)
+        line_item = part.find(".//jmx_eb:Line", self.ns)
         line = line_item.text
 
         return Feature(geometry = self.lineOrPolygon(line), properties= properties)
 
 
+    def corrdinate_part(self, cp, properties = {}):
+        line_item = cp.find(".//jmx_eb:Line", self.ns)
+        line = line_item.text
+
+        return Feature(geometry = self.lineOrPolygon(line), properties= properties)
+
 
     def item_info(self, item):
         item_type = item.find(".//jmx_body:Type", self.ns).text
-        print item_type
 
         if item_type == u'等圧線':
-            return self.isobar_part(item)
+            property = {"LinePart": "isobar"}
+            return self.isobar_part(item, property)
 
         elif item_type == u'低気圧':
             property = {"CenterType": "low"}
-            return self.center_part(item, property)
+#            return self.center_part(item, property)
 
         elif item_type == u'高気圧':
             property = {"CenterType": "high"}
             return self.center_part(item, property)
 
         elif item_type == u'寒冷前線':
+            property = {"LinePart": "coldfront"}
+            return self.corrdinate_part(item, property)
+
             pass
         elif item_type == u'温暖前線':
+            property = {"LinePart": "warmfront"}
+            return self.corrdinate_part(item, property)
             pass
         else:
+            print "WARN:TYpe Missing", item_type
             pass
 
         return
+
+
+if __name__ == '__main__':
+        chart = WeatherChart()
+        geo = chart.parse('./test/data/70_58_01_130523_VZSA50.xml')
+        print geojson.dumps(geo)

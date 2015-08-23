@@ -21,8 +21,10 @@ class JMXTestCase(unittest.TestCase):
 
         self.assertEqual(l, geojson.loads('{"coordinates": [[151.99, 59.27], [151.79, 59.24], [151.6, 59.21]], "type": "LineString"}'))
 
+    def test_lineOrPolygon_polygon(self):
+        jmx = JMX()
         l2 = jmx.lineOrPolygon('+59.27+151.99/+59.24+151.79/+59.21+151.60/+59.27+151.99/');
-        self.assertEqual(l2, geojson.loads('{"coordinates": [[151.99, 59.27], [151.79, 59.24], [151.6, 59.21], [151.99, 59.27]], "type": "Polygon"}'))
+        self.assertEqual(l2, geojson.loads('{"coordinates": [[[151.99, 59.27], [151.79, 59.24], [151.6, 59.21], [151.99, 59.27]]], "type": "Polygon"}'))
 
     def test_coordinate_xy(self):
         jmx = JMX()
@@ -35,7 +37,7 @@ class JMXTestCase(unittest.TestCase):
 
         polyline = jmx.polyline('+59.27+151.99/+59.24+151.79/+59.21+151.60/')
 
-        self.assertEqual(polyline, [[151.99, 59.27], [151.79, 59.24], [151.6, 59.21]])
+        self.assertEqual(polyline, [(151.99, 59.27), (151.79, 59.24), (151.6, 59.21)])
 
 
 

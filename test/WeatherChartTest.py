@@ -48,7 +48,7 @@ class WeatherChartTestCase(unittest.TestCase):
     def test_parse(self):
         chart = WeatherChart()
         geo = chart.parse('./data/70_58_01_130523_VZSA50.xml')
-        print geojson.dumps(geo)
+#        print geojson.dumps(geo)
 
 
     def test_isobar_part(self):
@@ -62,7 +62,7 @@ class WeatherChartTestCase(unittest.TestCase):
         chart = WeatherChart()
         cp = ET.fromstring(self.high_part)
         result = chart.center_part(cp)
-        print geojson.dumps(result)
+#        print geojson.dumps(result)
         pass
 
 
