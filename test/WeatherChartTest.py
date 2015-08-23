@@ -23,16 +23,45 @@ class WeatherChartTestCase(unittest.TestCase):
 """
 
 
+    high_part = """<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns:jmx="http://xml.kishou.go.jp/jmaxml1/" xmlns:jmx_add="http://xml.kishou.go.jp/jmaxml1/addition1/" xmlns="http://xml.kishou.go.jp/jmaxml1/">
+    <Body xmlns:jmx_eb="http://xml.kishou.go.jp/jmaxml1/elementBasis1/" xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/">
+             <Item>
+                    <Kind>
+                        <Property>
+                            <Type>高気圧</Type>
+                            <CenterPart>
+                                <jmx_eb:Coordinate type="中心位置（度）">+48.67+123.55/</jmx_eb:Coordinate>
+                                <jmx_eb:Direction condition="不定" type="移動方向" unit="度（真方位）"/>
+                                <jmx_eb:Speed description="ほとんど停滞" type="移動速度" unit="km/h"/>
+                                <jmx_eb:Speed description="ＡＬＭＯＳＴ　ＳＴＮＲ" type="移動速度" unit="ノット"/>
+                                <jmx_eb:Pressure type="中心気圧" unit="hPa">1016</jmx_eb:Pressure>
+                            </CenterPart>
+                        </Property>
+                    </Kind>
+                </Item>
+      </Body>
+</Report>
+"""
+
+
     def test_parse(self):
         chart = WeatherChart()
-
-        chart.parse('./data/70_58_01_130523_VZSA50.xml')
+        geo = chart.parse('./data/70_58_01_130523_VZSA50.xml')
+        print geojson.dumps(geo)
 
 
     def test_isobar_part(self):
         chart = WeatherChart()
         ip = ET.fromstring(self.isobar_part)
         result = chart.isobar_part(ip)
+        print geojson.dumps(result)
+        pass
+
+    def test_high_part(self):
+        chart = WeatherChart()
+        cp = ET.fromstring(self.high_part)
+        result = chart.center_part(cp)
         print geojson.dumps(result)
         pass
 

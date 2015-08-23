@@ -6,22 +6,11 @@ import xml.etree.ElementTree as ET
 
 from geojson import LineString
 from geojson import Polygon
+from geojson import Point
 from geojson import Feature
 from geojson import FeatureCollection
 
 
-class Pressure():
-    def __init__(self, pressure, line):
-        self.pressure = pressure
-        self.line = line
-
-    @property
-    def __geo_interface__(self):
-        return {
-        "type": "Feature",
-        "properties": {"pressure": (self.pressure)},
-        "geometry": self.line
-        }
 
 class JMX:
     def __init__(self):
@@ -37,70 +26,66 @@ class JMX:
 
     def parse(self, file):
         root = ET.parse(file)
-        self.report(root)
-
-        return
+        return self.report(root)
 
     def report(self, r):
+
+        properties = {}
+        features = []
+
         c = r.find('jmx:Control', self.ns)
         if (c != None):
             self.control(c)
 
         h = r.find('jmx_head:Head', self.ns)
         if (h != None):
-            self.head(h)
+            properties = self.head(h)
 
         b = r.find('jmx_body:Body', self.ns)
         if (b != None):
-            self.body(b)
+            features = self.body(b)
 
-        return
+        return FeatureCollection(features)
 
     def control(self, report):
         return
 
     def head(self, h):
-        self.title = self.getText(h.find('jmx_head:Title', self.ns))
-        self.reportTime = self.getText(h.find('jmx_head:ReportDateTime', self.ns))
-        self.targetTime = self.getText(h.find('jmx_head:TargetDateTime', self.ns))
-        self.eventId = self.getText(h.find('jmx_head:EventID', self.ns))
-        self.infoType = self.getText(h.find('jmx_head:InfoType', self.ns))
-        self.serial = self.getText(h.find('jmx_head:Serial', self.ns))
-        self.inforKind = self.getText(h.find('jmx_head:InfoKind', self.ns))
-        self.infoKindVersion = self.getText(h.find('jmx_head:InfoKindVersion', self.ns))
-        self.headLine = self.getText(h.find('jmx_head:HeadLine/jmx_head:Text', self.ns))
+        property = {}
+        property["Title"] = self.getText(h.find('jmx_head:Title', self.ns))
+        property["ReportDateTime"] = self.getText(h.find('jmx_head:ReportDateTime', self.ns))
+        property["TargetDateTime"] = self.getText(h.find('jmx_head:TargetDateTime', self.ns))
+        property["EventID"] = self.getText(h.find('jmx_head:EventID', self.ns))
+        property["InfoType"] = self.getText(h.find('jmx_head:InfoType', self.ns))
+        property["Serial"] = self.getText(h.find('jmx_head:Serial', self.ns))
+        property["InfoKind"] = self.getText(h.find('jmx_head:InfoKind', self.ns))
+        property["InfoKindVersion"] = self.getText(h.find('jmx_head:InfoKindVersion', self.ns))
+        property["Text"] = self.getText(h.find('jmx_head:HeadLine/jmx_head:Text', self.ns))
 
-
-
-        #        <Title>地上実況図</Title>
-        #        <ReportDateTime>2013-04-06T23:13:00+09:00</ReportDateTime>
-        #        <TargetDateTime>2013-04-06T21:00:00+09:00</TargetDateTime>
-        #        <EventID/>
-        #        <InfoType>発表</InfoType>
-        #        <Serial/>
-        #        <InfoKind>天気図情報</InfoKind>
-        #        <InfoKindVersion>1.1_1</InfoKindVersion>
-        #        <Headline>
-        #            <Text/>
-        #        </Headline>
-        return
+        return property
 
 
     def body(self, b):
 
+        info = []
+
         minfos = b.findall('jmx_body:MeteorologicalInfos', self.ns)
         for minfo in minfos:
-            self.meteo_info(minfo)
+            info.append(self.meteo_info(minfo))
 
-        return
+        return info
 
     def meteo_info(self, mi):
-        items = mi.findall('jmx_body:Item', self.ns)
+        items = mi.findall('.//jmx_body:Item', self.ns)
+
+        item_infos = []
 
         for item in items:
-            self.item_info(item)
+            iteminfo = self.item_info(item)
+            if(iteminfo != None):
+                item_infos.append(iteminfo)
 
-        return
+        return item_infos
 
     def item_info(self, item):
         return
@@ -118,9 +103,9 @@ class JMX:
             return None
 
         if (first == last):
-            return Polygon([line])
+            return Polygon(line)
         else:
-            return LineString([line])
+            return LineString(line)
 
     def polyline(self, polyline_string):
         lines = []
@@ -133,7 +118,7 @@ class JMX:
             if (line != None):
                 lines.append(line)
 
-        return lines
+        return [lines]
 
     def coordinate_xy(self, coordinate_string):
         coordinate = self.re_number.findall(coordinate_string)
@@ -158,26 +143,71 @@ class WeatherChart(JMX):
     def dummy(self):
         pass
 
-    def center_part(self, cp):
-        pass
+    def center_part(self, cp, properties = {}):
+        center = cp.find(".//jmx_body:CenterPart", self.ns)
+
+        coordinate_item = center.find(".//jmx_eb:Coordinate", self.ns)
+        [y, x] = self.coordinate_xy(coordinate_item.text);
+
+        direction_item  = center.find(".//jmx_eb:Direction", self.ns)
+        if(direction_item.text):
+            direction = int(direction_item.text);
+            properties['Direction'] = direction
+
+        speed_items      = center.findall('.//jmx_eb:Speed', self.ns)
+
+        for speed_item in speed_items:
+            if(speed_item.get('unit') == u'ノット'):
+                if(speed_item.text):
+                    knot = int(speed_item.text)
+                    properties['knot'] = knot
+
+            if(speed_item.get('unit') == 'km/h'):
+                if(speed_item.text):
+                    kmh = int(speed_item.text)
+                    properties['kmh'] = kmh
+
+        pressure_item = center.find('.//jmx_eb:Pressure', self.ns)
+        pressure = int(pressure_item.text);
+        properties["Pressure"] = pressure
+
+        return Feature(geometry = Point([y, x], properties = properties))
 
 
-    def isobar_part(self, ip):
+    def isobar_part(self, ip, properties = {}):
         part = ip.find(".//jmx_body:IsobarPart", self.ns)
 
         pressure_item = part.find("jmx_eb:Pressure", self.ns)
         pressure = pressure_item.text
+        properties["PresssureLevel"] = pressure
 
         line_item = part.find("jmx_eb:Line", self.ns)
         line = line_item.text
 
-        return Pressure(pressure, self.lineOrPolygon(line))
+        return Feature(geometry = self.lineOrPolygon(line), properties= properties)
 
 
 
-    def item_info(self, mi):
+    def item_info(self, item):
+        item_type = item.find(".//jmx_body:Type", self.ns).text
+        print item_type
 
+        if item_type == u'等圧線':
+            return self.isobar_part(item)
 
+        elif item_type == u'低気圧':
+            property = {"CenterType": "low"}
+            return self.center_part(item, property)
 
+        elif item_type == u'高気圧':
+            property = {"CenterType": "high"}
+            return self.center_part(item, property)
+
+        elif item_type == u'寒冷前線':
+            pass
+        elif item_type == u'温暖前線':
+            pass
+        else:
+            pass
 
         return
