@@ -203,7 +203,7 @@ class WeatherChart(JMX):
 
         elif item_type == u'低気圧':
             property = {"CenterType": "low"}
-#            return self.center_part(item, property)
+            return self.center_part(item, property)
 
         elif item_type == u'高気圧':
             property = {"CenterType": "high"}
